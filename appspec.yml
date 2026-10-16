@@ -3,6 +3,8 @@ os: linux
 files:
   - source: /
     destination: /home/ubuntu
+# Sobrescreve arquivos que já existam no destino (evita falha na segunda implantação)
+file_exists_behavior: OVERWRITE
 hooks:
   BeforeInstall:
     - location: scripts/install_dependencies.sh

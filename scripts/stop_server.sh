@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pid=`pgrep flask`
+pid=`pgrep -f "flask run"`
 if [ -n  "$pid" ]
 then
 	kill $pid

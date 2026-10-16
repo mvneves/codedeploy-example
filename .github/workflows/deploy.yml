@@ -1,0 +1,43 @@
+name: Deploy com CodeDeploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  APPLICATION_NAME: codedeploy-example
+  DEPLOYMENT_GROUP: codedeploy-example-group
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # No Learner Lab as credenciais são temporárias: atualize os três secrets a cada nova sessão
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Empacota o repositório, envia ao S3 e registra a revisão no CodeDeploy
+      - name: Enviar revisão para o S3
+        run: |
+          aws deploy push \
+            --application-name "$APPLICATION_NAME" \
+            --s3-location "s3://${{ vars.S3_BUCKET }}/$APPLICATION_NAME/${{ github.sha }}.zip" \
+            --source .
+
+      - name: Criar implantação
+        run: |
+          DEPLOYMENT_ID=$(aws deploy create-deployment \
+            --application-name "$APPLICATION_NAME" \
+            --deployment-group-name "$DEPLOYMENT_GROUP" \
+            --s3-location "bucket=${{ vars.S3_BUCKET }},key=$APPLICATION_NAME/${{ github.sha }}.zip,bundleType=zip" \
+            --query deploymentId --output text)
+          echo "Implantação $DEPLOYMENT_ID criada"
+          aws deploy wait deployment-successful --deployment-id "$DEPLOYMENT_ID"
